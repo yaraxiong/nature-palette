@@ -68,7 +68,7 @@ export default function LoginModal({ open, onClose, onLogin }: LoginModalProps) 
         >
           <button
             type="button"
-            className="absolute inset-0 bg-[#F7F9F6]/40"
+            className="absolute inset-0 bg-[#F7F9F6]/40 z-[1]"
             onClick={onClose}
             aria-label="关闭登录弹窗"
           />
@@ -78,7 +78,7 @@ export default function LoginModal({ open, onClose, onLogin }: LoginModalProps) 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.98 }}
             transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="relative w-full max-w-[420px] glass rounded-3xl shadow-xl border border-rain-border"
+            className="relative z-[2] w-full max-w-[420px] glass rounded-3xl shadow-xl border border-rain-border"
           >
             <div className="flex items-start justify-between px-6 pt-6">
               <div>
@@ -92,7 +92,10 @@ export default function LoginModal({ open, onClose, onLogin }: LoginModalProps) 
 
               <button
                 type="button"
-                onClick={onClose}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClose();
+                }}
                 className="p-2 rounded-full glass glass-hover transition-all duration-500"
                 aria-label="关闭"
               >

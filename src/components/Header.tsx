@@ -4,8 +4,7 @@ import LoginModal from "./LoginModal";
 import { useAuth } from "../state/auth";
 
 export default function Header() {
-  const { user, login, logout } = useAuth();
-  const [loginOpen, setLoginOpen] = useState(false);
+  const { user, login, logout, loginModalOpen, openLoginModal, closeLoginModal } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const initials = useMemo(() => {
@@ -24,7 +23,7 @@ export default function Header() {
       <div className="flex items-center gap-6 pointer-events-auto">
         {!user ? (
           <button
-            onClick={() => setLoginOpen(true)}
+            onClick={openLoginModal}
             className="group flex items-center gap-2 px-4 py-1.5 rounded-full glass glass-hover transition-all duration-500"
           >
             <User className="w-3.5 h-3.5 text-[#4A5D4E] opacity-60 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
@@ -88,8 +87,8 @@ export default function Header() {
       </div>
 
       <LoginModal
-        open={loginOpen}
-        onClose={() => setLoginOpen(false)}
+        open={loginModalOpen}
+        onClose={closeLoginModal}
         onLogin={(displayName) => login(displayName)}
       />
     </header>

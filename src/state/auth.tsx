@@ -10,6 +10,9 @@ type AuthContextValue = {
   user: AuthUser | null;
   login: (displayName: string) => void;
   logout: () => void;
+  loginModalOpen: boolean;
+  openLoginModal: () => void;
+  closeLoginModal: () => void;
 };
 
 const STORAGE_KEY = "rainyVibe:mockUser";
@@ -39,6 +42,7 @@ function createMockUser(displayName: string): AuthUser {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => safeParseUser(localStorage.getItem(STORAGE_KEY)));
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
@@ -60,7 +64,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
-  const value = useMemo<AuthContextValue>(() => ({ user, login, logout }), [user, login, logout]);
+  const openLoginModal = useCallback(() => setLoginModalOpen(true), []);
+  const closeLoginModal = useCallback(() => setLoginModalOpen(false), []);
+
+  const value = useMemo<AuthContextValue>(
+    () => ({ user, login, logout, loginModalOpen, openLoginModal, closeLoginModal }),
+    [user, login, logout, loginModalOpen, openLoginModal, closeLoginModal]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

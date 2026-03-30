@@ -24,7 +24,7 @@ export default function Tooltip({ content, visible, x, y }: TooltipProps) {
           className="fixed z-[100] pointer-events-none"
         >
           <div className="glass px-4 py-2.5 rounded-xl shadow-xl min-w-[140px] max-w-[220px]">
-            <p className="text-[11px] leading-relaxed text-stone-600 font-light tracking-wide text-center">
+            <p className="whitespace-pre-line text-[11px] leading-relaxed text-stone-600 font-light tracking-wide text-center">
               {content}
             </p>
             {/* Diamond indicator */}
