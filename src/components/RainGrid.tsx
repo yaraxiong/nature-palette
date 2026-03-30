@@ -3,18 +3,6 @@ import { motion } from "motion/react";
 import Tooltip from "./Tooltip";
 import { useRainRecords } from "../state/rainRecords";
 
-const LYRICS = [
-  "雨还在下，像在寻找谁的解答。",
-  "It rains just like it used to.",
-  "雨の匂いに懐かしくなる。",
-  "Lost in the echo of the rain.",
-  "春雨惊春清谷天。",
-  "Listening to the rhythm of the falling rain.",
-  "雨は、いつか上がるものだから。",
-  "The rain is a quiet conversation.",
-  "长沙的雨，总带着点湿润的诗意。"
-];
-
 const COLORS = [
   "#E7E5E466", // bg-stone-200/40 (Dry)
   "#D1FAE566", // bg-emerald-100/40
@@ -42,7 +30,7 @@ export default function RainGrid({ activeDayIndex, onExistingRecordClick, onEmpt
   const [tooltip, setTooltip] = useState({ visible: false, content: "", x: 0, y: 0 });
   const gridRef = useRef<HTMLDivElement>(null);
 
-  const { records } = useRainRecords();
+  const { records, getDateISO } = useRainRecords();
 
   useEffect(() => {
     if (activeDayIndex == null) return;
@@ -111,7 +99,7 @@ export default function RainGrid({ activeDayIndex, onExistingRecordClick, onEmpt
 
             const tooltipContent = record
               ? `${record.lyrics.zh}\n---\n${record.lyrics.en}\n---\n${record.lyrics.ja}`
-              : "尚未封存";
+              : `${getDateISO(i)}\n点击捕捉按钮来开启这一天的记录`;
 
             return (
               <motion.div

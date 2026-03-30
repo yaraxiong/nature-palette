@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RAIN_COLORS } from "../constants/rainColors";
 import type { RainLyrics, RainRecord } from "../state/rainRecords";
+import { useRainRecords } from "../state/rainRecords";
 
 type RecordModalProps = {
   open: boolean;
@@ -75,6 +76,7 @@ function simulateLyrics(text: string) {
 }
 
 export default function RecordModal({ open, mode, dayIndex, record, onClose, onSave }: RecordModalProps) {
+  const { getDateISO } = useRainRecords();
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(record?.photoDataUrl ?? null);
   const [text, setText] = useState(record?.text ?? "");
@@ -93,6 +95,7 @@ export default function RecordModal({ open, mode, dayIndex, record, onClose, onS
 
   const rainIntensityIndex = useMemo(() => computeRainIntensityIndex(text, photoDataUrl), [text, photoDataUrl]);
   const title = mode === "create" ? "封存今天的雨" : "查看/修改当天雨";
+  const dateISO = record?.dateISO ?? getDateISO(dayIndex);
 
   const onPickPhoto = async (file: File | null) => {
     if (!file) return;
@@ -169,6 +172,20 @@ export default function RecordModal({ open, mode, dayIndex, record, onClose, onS
                 >
                   <span className="text-[12px] text-[#4A5D4E] opacity-70">×</span>
                 </button>
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-stone-400 font-medium">
+                  {dateISO}
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] text-stone-400 font-light">Dry</span>
+                  <span
+                    className="w-2.5 h-2.5 rounded-full border border-rain-border"
+                    style={{ backgroundColor: RAIN_COLORS[rainIntensityIndex] }}
+                    aria-hidden="true"
+                  />
+                  <span className="text-[9px] text-stone-400 font-light">Wet</span>
+                </div>
               </div>
             </div>
 

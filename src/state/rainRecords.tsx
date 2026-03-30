@@ -22,6 +22,7 @@ const START_KEY = "rainyVibe:rainDaysStartISO:v1";
 type RainRecordsContextValue = {
   records: Array<RainRecord | null>;
   todayIndex: number; // 固定为 29（最后一天）
+  getDateISO: (dayIndex: number) => string;
   getRecord: (dayIndex: number) => RainRecord | null;
   upsertRecord: (dayIndex: number, record: Omit<RainRecord, "dayIndex" | "dateISO" | "updatedAt">) => void;
 };
@@ -109,6 +110,12 @@ export function RainRecordsProvider({ children }: { children: React.ReactNode })
     [records]
   );
 
+  const getDateISO = useCallback((dayIndex: number) => {
+    const start = initStartDate();
+    const safeIndex = Math.max(0, Math.min(29, dayIndex));
+    return toLocalISODate(addDays(start, safeIndex));
+  }, []);
+
   const upsertRecord = useCallback(
     (dayIndex: number, record: Omit<RainRecord, "dayIndex" | "dateISO" | "updatedAt">) => {
       if (dayIndex < 0 || dayIndex > 29) return;
@@ -134,9 +141,10 @@ export function RainRecordsProvider({ children }: { children: React.ReactNode })
     []
   );
 
-  const value = useMemo<RainRecordsContextValue>(() => ({ records, todayIndex, getRecord, upsertRecord }), [
+  const value = useMemo<RainRecordsContextValue>(() => ({ records, todayIndex, getDateISO, getRecord, upsertRecord }), [
     records,
     todayIndex,
+    getDateISO,
     getRecord,
     upsertRecord,
   ]);
