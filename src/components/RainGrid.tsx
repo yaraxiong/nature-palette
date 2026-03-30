@@ -1,0 +1,133 @@
+import { useState, useRef } from "react";
+import { motion } from "motion/react";
+import Tooltip from "./Tooltip";
+
+const LYRICS = [
+  "雨还在下，像在寻找谁的解答。",
+  "It rains just like it used to.",
+  "雨の匂いに懐かしくなる。",
+  "Lost in the echo of the rain.",
+  "春雨惊春清谷天。",
+  "Listening to the rhythm of the falling rain.",
+  "雨は、いつか上がるものだから。",
+  "The rain is a quiet conversation.",
+  "长沙的雨，总带着点湿润的诗意。"
+];
+
+const COLORS = [
+  "#E7E5E466", // bg-stone-200/40 (Dry)
+  "#D1FAE566", // bg-emerald-100/40
+  "#A7F3D080", // bg-emerald-200/50
+  "#6EE7B799", // bg-emerald-300/60
+  "#34D39999", // bg-emerald-400/60
+  "#4A5D4E66", // Darker sage
+  "#4A5D4E99", // Moss
+  "#4A5D4ECC", // Deep rain
+];
+
+export default function RainGrid() {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [tooltip, setTooltip] = useState({ visible: false, content: "", x: 0, y: 0 });
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  // Fixed data for each day
+  const [days] = useState(() => Array.from({ length: 30 }, (_, i) => ({
+    id: i,
+    intensity: Math.floor(Math.random() * COLORS.length),
+    lyric: LYRICS[Math.floor(Math.random() * LYRICS.length)]
+  })));
+
+  const handleMouseEnter = (e: React.MouseEvent, lyric: string, index: number) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setHoveredIndex(index);
+    setTooltip({
+      visible: true,
+      content: lyric,
+      x: rect.left + rect.width / 2,
+      y: rect.top
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredIndex(null);
+    setTooltip(prev => ({ ...prev, visible: false }));
+  };
+
+  return (
+    <div className="w-full max-w-[390px] mx-auto px-6 pb-24">
+      <div className="flex flex-col gap-4">
+        <div className="flex justify-between items-end mb-2">
+          <span className="text-[10px] uppercase tracking-[0.2em] text-stone-400 font-medium">
+            Last 30 Days
+          </span>
+          <div className="flex gap-1.5 items-center">
+            <span className="text-[9px] text-stone-400 mr-1">Dry</span>
+            {COLORS.slice(0, 4).map((c, i) => (
+              <motion.div
+                key={i}
+                animate={{
+                  opacity: [0.3, 1, 0.3],
+                  scale: [1, 1.2, 1],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: i * 0.2,
+                }}
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: c }}
+              />
+            ))}
+            <span className="text-[9px] text-stone-400 ml-1">Wet</span>
+          </div>
+        </div>
+
+        <div 
+          ref={gridRef}
+          className="grid grid-cols-6 sm:grid-cols-10 gap-2 w-full"
+        >
+          {days.map((day, i) => {
+            const isHovered = hoveredIndex === i;
+            const isAnyHovered = hoveredIndex !== null;
+            
+            return (
+              <motion.div
+                key={day.id}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={isAnyHovered && !isHovered ? {
+                  opacity: [0.4, 0.7, 0.4],
+                  scale: [0.98, 1, 0.98],
+                } : {
+                  opacity: 1,
+                  scale: 1,
+                }}
+                whileHover={{ 
+                  scale: 1.1, 
+                  zIndex: 20,
+                  transition: { duration: 0.2, ease: "easeOut" }
+                }}
+                transition={isAnyHovered && !isHovered ? {
+                  opacity: { duration: 2, repeat: Infinity, ease: "easeInOut", delay: i * 0.05 },
+                  scale: { duration: 2, repeat: Infinity, ease: "easeInOut", delay: i * 0.05 }
+                } : {
+                  opacity: { delay: i * 0.02, duration: 0.5 },
+                  scale: { delay: i * 0.02, duration: 0.5 }
+                }}
+                onMouseEnter={(e) => handleMouseEnter(e, day.lyric, i)}
+                onMouseLeave={handleMouseLeave}
+                className="aspect-square rounded-md cursor-help relative"
+                style={{ 
+                  backgroundColor: COLORS[day.intensity],
+                  boxShadow: isHovered ? "0 4px 12px rgba(0,0,0,0.08)" : "none"
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
+      
+      <Tooltip {...tooltip} />
+    </div>
+  );
+}
