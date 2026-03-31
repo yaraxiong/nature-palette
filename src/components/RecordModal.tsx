@@ -83,6 +83,7 @@ export default function RecordModal({ open, mode, dayIndex, record, onClose, onS
   const [lyrics, setLyrics] = useState<RainLyrics | null>(record?.lyrics ?? null);
   const [sealed, setSealed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isEditingText, setIsEditingText] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -91,6 +92,7 @@ export default function RecordModal({ open, mode, dayIndex, record, onClose, onS
     setLyrics(record?.lyrics ?? null);
     setSealed(Boolean(record && record.photoDataUrl !== null) || Boolean(record && record.text.trim()));
     setLoading(false);
+    setIsEditingText(mode === "create");
   }, [open, record]);
 
   const rainIntensityIndex = useMemo(() => computeRainIntensityIndex(text, photoDataUrl), [text, photoDataUrl]);
@@ -190,26 +192,25 @@ export default function RecordModal({ open, mode, dayIndex, record, onClose, onS
             </div>
 
             <div className="px-6 pb-6">
-              <div className="glass rounded-2xl border border-rain-border bg-white/20 p-3">
-                <div className="text-[10px] uppercase tracking-[0.2em] text-stone-400 font-medium mb-2">
-                  Rain Photo
+              <div className="glass rounded-2xl border border-rain-border bg-white/20 overflow-hidden">
+                <div className="relative h-[168px] bg-white/10">
+                  {photoDataUrl ? (
+                    <img src={photoDataUrl} alt="Rain" className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 grid place-items-center">
+                      <p className="text-[11px] text-stone-600/80 font-light tracking-wide">选择一张雨景照片</p>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white/30" />
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="relative w-[92px] h-[92px] rounded-xl border border-rain-border overflow-hidden bg-white/10">
-                    {photoDataUrl ? (
-                      <img
-                        src={photoDataUrl}
-                        alt="Rain"
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 grid place-items-center text-[10px] text-stone-500/80">
-                        选择照片
-                      </div>
-                    )}
+
+                <div className="p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-stone-400 font-medium">Rain Photo</p>
+                    <p className="text-[10px] text-stone-500/70 font-light">本地保存</p>
                   </div>
 
-                  <div className="flex-1">
+                  <div className="mt-3">
                     <input
                       ref={fileRef}
                       type="file"
@@ -223,31 +224,50 @@ export default function RecordModal({ open, mode, dayIndex, record, onClose, onS
                       className="w-full px-4 py-2 rounded-full glass glass-hover transition-all duration-500"
                     >
                       <span className="text-[11px] font-medium tracking-[0.15em] text-[#4A5D4E] opacity-70">
-                        上传/选择图片
+                        上传/更换图片
                       </span>
                     </button>
-                    <p className="mt-2 text-[10px] text-stone-500/80 leading-relaxed font-light">
-                      保存在本地，刷新不会丢失。
-                    </p>
                   </div>
                 </div>
               </div>
 
               <div className="mt-4">
-                <label className="block text-[10px] uppercase tracking-[0.2em] text-stone-400 font-medium mb-2">
-                  Mood / Lyrics note
-                </label>
-                <textarea
-                  value={text}
-                  onChange={(e) => {
-                    setText(e.target.value);
-                    setSealed(false);
-                  }}
-                  rows={3}
-                  maxLength={120}
-                  placeholder="比如：雨声治愈，听着某首歌…"
-                  className="w-full glass rounded-2xl px-4 py-3 text-[12px] tracking-wide text-stone-700 placeholder:text-stone-400/80 outline-none focus:bg-white/55 transition-all duration-500"
-                />
+                <div className="flex items-end justify-between gap-3 mb-2">
+                  <label className="block text-[10px] uppercase tracking-[0.2em] text-stone-400 font-medium">
+                    Mood / Lyrics note
+                  </label>
+                  {mode === "edit" && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingText(v => !v)}
+                      className="px-3 py-1 rounded-full glass glass-hover transition-all duration-500"
+                    >
+                      <span className="text-[10px] font-medium tracking-[0.15em] text-[#4A5D4E] opacity-70">
+                        {isEditingText ? "收起微调" : "微调文字"}
+                      </span>
+                    </button>
+                  )}
+                </div>
+
+                {mode === "edit" && !isEditingText ? (
+                  <div className="glass rounded-2xl border border-rain-border bg-white/20 px-4 py-3">
+                    <p className="text-[12px] leading-relaxed text-stone-700 font-light tracking-wide whitespace-pre-line">
+                      {text.trim() ? text : "（这一天你还没有留下文字。）"}
+                    </p>
+                  </div>
+                ) : (
+                  <textarea
+                    value={text}
+                    onChange={(e) => {
+                      setText(e.target.value);
+                      setSealed(false);
+                    }}
+                    rows={3}
+                    maxLength={120}
+                    placeholder="比如：雨声治愈，听着某首歌…"
+                    className="w-full glass rounded-2xl px-4 py-3 text-[12px] tracking-wide text-stone-700 placeholder:text-stone-400/80 outline-none focus:bg-white/55 transition-all duration-500"
+                  />
+                )}
               </div>
 
               <div className="mt-5">

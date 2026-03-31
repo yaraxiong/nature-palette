@@ -1,10 +1,9 @@
 import { CloudRain, User } from "lucide-react";
 import { useMemo, useState } from "react";
-import LoginModal from "./LoginModal";
 import { useAuth } from "../state/auth";
 
 export default function Header() {
-  const { user, login, logout, loginModalOpen, openLoginModal, closeLoginModal } = useAuth();
+  const { user, logout, openLoginModal } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const initials = useMemo(() => {
@@ -86,11 +85,6 @@ export default function Header() {
         </div>
       </div>
 
-      <LoginModal
-        open={loginModalOpen}
-        onClose={closeLoginModal}
-        onLogin={(displayName) => login(displayName)}
-      />
     </header>
   );
 }

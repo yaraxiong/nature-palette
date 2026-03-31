@@ -57,7 +57,7 @@ export default function LoginModal({ open, onClose, onLogin }: LoginModalProps) 
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+          className="fixed inset-0 z-[300] flex items-center justify-center p-4 pointer-events-auto"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -78,7 +78,8 @@ export default function LoginModal({ open, onClose, onLogin }: LoginModalProps) 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.98 }}
             transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="relative z-[2] w-full max-w-[420px] glass rounded-3xl shadow-xl border border-rain-border"
+            onClick={(e) => e.stopPropagation()}
+            className="relative z-50 w-full max-w-[420px] glass rounded-3xl shadow-xl border border-rain-border pointer-events-auto"
           >
             <div className="flex items-start justify-between px-6 pt-6">
               <div>

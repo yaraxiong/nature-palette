@@ -5,11 +5,12 @@ import { AuthProvider } from "./state/auth";
 import { RainRecordsProvider, useRainRecords } from "./state/rainRecords";
 import { useAuth } from "./state/auth";
 import RecordModal from "./components/RecordModal";
+import LoginModal from "./components/LoginModal";
 import { AnimatePresence, motion } from "motion/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 function AppContent() {
-  const { user, openLoginModal } = useAuth();
+  const { user, login, loginModalOpen, openLoginModal, closeLoginModal } = useAuth();
   const { records, upsertRecord } = useRainRecords();
   const todayIndex = 29;
 
@@ -17,6 +18,7 @@ function AppContent() {
   const [recordOpen, setRecordOpen] = useState(false);
   const [recordMode, setRecordMode] = useState<"create" | "edit">("create");
   const [recordDayIndex, setRecordDayIndex] = useState(todayIndex);
+  const [pendingOpenDayIndex, setPendingOpenDayIndex] = useState<number | null>(null);
 
   const [toast, setToast] = useState<string | null>(null);
 
@@ -28,7 +30,9 @@ function AppContent() {
   };
 
   const openRecordForDay = (dayIndex: number) => {
+    setActiveDayIndex(dayIndex);
     if (!user) {
+      setPendingOpenDayIndex(dayIndex);
       openLoginModal();
       return;
     }
@@ -38,6 +42,18 @@ function AppContent() {
     setRecordMode(existing ? "edit" : "create");
     setRecordOpen(true);
   };
+
+  useEffect(() => {
+    if (!user) return;
+    if (pendingOpenDayIndex == null) return;
+    const dayIndex = pendingOpenDayIndex;
+    setPendingOpenDayIndex(null);
+    const existing = records[dayIndex];
+    setActiveDayIndex(dayIndex);
+    setRecordDayIndex(dayIndex);
+    setRecordMode(existing ? "edit" : "create");
+    setRecordOpen(true);
+  }, [user, pendingOpenDayIndex, records]);
 
   const openEmptyPrompt = (dayIndex: number) => {
     setActiveDayIndex(dayIndex);
@@ -91,6 +107,12 @@ function AppContent() {
         record={record}
         onClose={closeRecord}
         onSave={onSaveRecord}
+      />
+
+      <LoginModal
+        open={loginModalOpen}
+        onClose={closeLoginModal}
+        onLogin={(displayName) => login(displayName)}
       />
 
       <AnimatePresence>
