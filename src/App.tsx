@@ -9,54 +9,68 @@ import LoginModal from "./components/LoginModal";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+function toLocalISODate(d: Date) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
 function AppContent() {
   const { user, login, loginModalOpen, openLoginModal, closeLoginModal } = useAuth();
-  const { records, upsertRecord } = useRainRecords();
-  const todayIndex = 29;
+  const { getRecordByDateISO, upsertRecordByDateISO, records } = useRainRecords();
 
-  const [activeDayIndex, setActiveDayIndex] = useState<number | null>(null);
+  const todayISO = useMemo(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return toLocalISODate(t);
+  }, []);
+
+  const [activeDateISO, setActiveDateISO] = useState<string | null>(null);
   const [recordOpen, setRecordOpen] = useState(false);
   const [recordMode, setRecordMode] = useState<"create" | "edit">("create");
-  const [recordDayIndex, setRecordDayIndex] = useState(todayIndex);
-  const [pendingOpenDayIndex, setPendingOpenDayIndex] = useState<number | null>(null);
+  const [recordDayIndexInView, setRecordDayIndexInView] = useState(29);
+  const [recordDateISO, setRecordDateISO] = useState(todayISO);
+  const [pendingOpen, setPendingOpen] = useState<{ dateISO: string; dayIndexInView: number } | null>(null);
 
   const [toast, setToast] = useState<string | null>(null);
 
-  const record = useMemo(() => records[recordDayIndex] ?? null, [records, recordDayIndex]);
+  // 不使用 useMemo，确保在 localStorage 写入成功后能立刻刷新面板展示内容
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const record = recordDateISO ? getRecordByDateISO(recordDateISO) : null;
 
   const closeRecord = () => {
     setRecordOpen(false);
-    setActiveDayIndex(null);
+    setActiveDateISO(null);
   };
 
-  const openRecordForDay = (dayIndex: number) => {
-    setActiveDayIndex(dayIndex);
+  const openRecordForDate = (dateISO: string, dayIndexInView: number) => {
+    setActiveDateISO(dateISO);
+    setRecordDayIndexInView(dayIndexInView);
     if (!user) {
-      setPendingOpenDayIndex(dayIndex);
+      setPendingOpen({ dateISO, dayIndexInView });
       openLoginModal();
       return;
     }
-    const existing = records[dayIndex];
-    setActiveDayIndex(dayIndex);
-    setRecordDayIndex(dayIndex);
+    const existing = getRecordByDateISO(dateISO);
+    setRecordDateISO(dateISO);
     setRecordMode(existing ? "edit" : "create");
     setRecordOpen(true);
   };
 
   useEffect(() => {
     if (!user) return;
-    if (pendingOpenDayIndex == null) return;
-    const dayIndex = pendingOpenDayIndex;
-    setPendingOpenDayIndex(null);
-    const existing = records[dayIndex];
-    setActiveDayIndex(dayIndex);
-    setRecordDayIndex(dayIndex);
-    setRecordMode(existing ? "edit" : "create");
-    setRecordOpen(true);
-  }, [user, pendingOpenDayIndex, records]);
+    if (!pendingOpen) return;
+    const { dateISO, dayIndexInView } = pendingOpen;
+    setPendingOpen(null);
+    openRecordForDate(dateISO, dayIndexInView);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, pendingOpen]);
 
-  const openEmptyPrompt = (dayIndex: number) => {
-    setActiveDayIndex(dayIndex);
+  const openEmptyPrompt = (dateISO: string, dayIndexInView: number) => {
+    setActiveDateISO(dateISO);
+    setRecordDayIndexInView(dayIndexInView);
     setToast("点击捕捉按钮来开启这一天的记录");
     window.setTimeout(() => setToast(null), 2200);
   };
@@ -67,7 +81,7 @@ function AppContent() {
     lyrics: { zh: string; en: string; ja: string };
     rainIntensityIndex: number;
   }) => {
-    upsertRecord(recordDayIndex, payload);
+    return upsertRecordByDateISO(recordDateISO, payload);
   };
 
   return (
@@ -82,13 +96,13 @@ function AppContent() {
         <div className="max-w-screen-sm mx-auto">
           <Hero
             onCaptureToday={() => {
-              openRecordForDay(todayIndex);
+              openRecordForDate(todayISO, 29);
             }}
           />
           <RainGrid
-            activeDayIndex={activeDayIndex}
-            onExistingRecordClick={(dayIndex) => openRecordForDay(dayIndex)}
-            onEmptyRecordClick={(dayIndex) => openEmptyPrompt(dayIndex)}
+            activeDateISO={activeDateISO}
+            onExistingRecordClick={(dateISO, dayIndexInView) => openRecordForDate(dateISO, dayIndexInView)}
+            onEmptyRecordClick={(dateISO, dayIndexInView) => openEmptyPrompt(dateISO, dayIndexInView)}
           />
         </div>
 
@@ -103,7 +117,8 @@ function AppContent() {
       <RecordModal
         open={recordOpen}
         mode={recordMode}
-        dayIndex={recordDayIndex}
+        dayIndex={recordDayIndexInView}
+        dateISO={recordDateISO}
         record={record}
         onClose={closeRecord}
         onSave={onSaveRecord}
