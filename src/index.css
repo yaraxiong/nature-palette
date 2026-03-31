@@ -1,11 +1,13 @@
 @import "tailwindcss";
 
 @theme {
-  --color-rain-bg: #F7F9F6;
-  --color-rain-green: #4A5D4E;
+  --color-rain-bg: #f7f9f6;
+  --color-rain-green: #4a5d4e;
   --color-rain-border: rgba(231, 229, 228, 0.5);
-  
-  --font-sans: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --font-sans:
+    "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, sans-serif;
 }
 
 @layer base {
@@ -19,8 +21,49 @@
   .glass {
     @apply backdrop-blur-md bg-white/40 border border-rain-border;
   }
-  
+
   .glass-hover {
     @apply hover:bg-white/60 transition-all duration-500 ease-out;
+  }
+
+  /* 平滑渐变色彩条Slider样式 */
+  .rain-intensity-slider {
+    @apply h-1.5 rounded-full appearance-none bg-none outline-none cursor-pointer;
+    background: linear-gradient(to right, #6c7c6f, #82e3be);
+    width: 100%;
+  }
+
+  /* Webkit浏览器 (Chrome, Safari) 的thumb样式 */
+  .rain-intensity-slider::-webkit-slider-thumb {
+    @apply appearance-none w-4 h-4 rounded-full cursor-pointer transition-all duration-200 hover:shadow-lg;
+    background: white;
+    border: none;
+    box-shadow: 0 2px 4px rgba(28, 25, 23, 0.15);
+  }
+
+  .rain-intensity-slider::-webkit-slider-thumb:active {
+    @apply shadow-xl;
+  }
+
+  /* Firefox的thumb样式 */
+  .rain-intensity-slider::-moz-range-thumb {
+    @apply w-4 h-4 rounded-full cursor-pointer transition-all duration-200 hover:shadow-lg;
+    background: white;
+    border: none;
+    box-shadow: 0 2px 4px rgba(28, 25, 23, 0.15);
+  }
+
+  .rain-intensity-slider::-moz-range-thumb:active {
+    @apply shadow-xl;
+  }
+
+  /* Firefox的track样式 */
+  .rain-intensity-slider::-moz-range-track {
+    background: transparent;
+    border: none;
+  }
+
+  .rain-intensity-slider:disabled {
+    @apply opacity-60 cursor-not-allowed;
   }
 }

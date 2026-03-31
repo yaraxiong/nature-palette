@@ -1,4 +1,12 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 export type RainLyrics = {
   zh: string;
@@ -12,7 +20,8 @@ export type RainRecord = {
   photoDataUrl: string | null;
   text: string;
   lyrics: RainLyrics;
-  rainIntensityIndex: number; // UI 映射：0..COLORS.length-1
+  rainIntensityIndex: number; // 保留以兼容旧版数据
+  specificColorString: string; // 精准计算的 RGB 颜色字符串："rgb(r, g, b)"
   updatedAt: number;
 };
 
@@ -21,7 +30,7 @@ type RainRecordsContextValue = {
   getRecordByDateISO: (dateISO: string) => RainRecord | null;
   upsertRecordByDateISO: (
     dateISO: string,
-    record: Omit<RainRecord, "dateISO" | "updatedAt">
+    record: Omit<RainRecord, "dateISO" | "updatedAt">,
   ) => boolean;
 };
 
@@ -41,6 +50,7 @@ function isRecordLike(x: any): x is RainRecord {
     typeof x.lyrics.ja === "string" &&
     (typeof x.photoDataUrl === "string" || x.photoDataUrl === null) &&
     typeof x.rainIntensityIndex === "number" &&
+    typeof x.specificColorString === "string" &&
     typeof x.updatedAt === "number"
   );
 }
@@ -72,7 +82,11 @@ function loadRecords(): RainRecord[] {
   }
 }
 
-export function RainRecordsProvider({ children }: { children: React.ReactNode }) {
+export function RainRecordsProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [records, setRecords] = useState<RainRecord[]>(() => loadRecords());
   const recordsRef = useRef<RainRecord[]>(records);
 
@@ -81,8 +95,9 @@ export function RainRecordsProvider({ children }: { children: React.ReactNode })
   }, [records]);
 
   const getRecordByDateISO = useCallback(
-    (dateISO: string) => recordsRef.current.find((r) => r.dateISO === dateISO) ?? null,
-    []
+    (dateISO: string) =>
+      recordsRef.current.find((r) => r.dateISO === dateISO) ?? null,
+    [],
   );
 
   const upsertRecordByDateISO = useCallback(
@@ -93,13 +108,16 @@ export function RainRecordsProvider({ children }: { children: React.ReactNode })
         text: record.text,
         lyrics: record.lyrics,
         rainIntensityIndex: record.rainIntensityIndex,
+        specificColorString: record.specificColorString,
         updatedAt: Date.now(),
       };
 
       const prev = recordsRef.current;
       const idx = prev.findIndex((r) => r.dateISO === dateISO);
       const next =
-        idx >= 0 ? prev.map((r, i) => (i === idx ? nextRecord : r)) : [...prev, nextRecord];
+        idx >= 0
+          ? prev.map((r, i) => (i === idx ? nextRecord : r))
+          : [...prev, nextRecord];
 
       try {
         localStorage.setItem(RECORDS_KEY, JSON.stringify(next));
@@ -116,20 +134,24 @@ export function RainRecordsProvider({ children }: { children: React.ReactNode })
         return false;
       }
     },
-    []
+    [],
   );
 
   const value = useMemo<RainRecordsContextValue>(
     () => ({ records, getRecordByDateISO, upsertRecordByDateISO }),
-    [records, getRecordByDateISO, upsertRecordByDateISO]
+    [records, getRecordByDateISO, upsertRecordByDateISO],
   );
 
-  return <RainRecordsContext.Provider value={value}>{children}</RainRecordsContext.Provider>;
+  return (
+    <RainRecordsContext.Provider value={value}>
+      {children}
+    </RainRecordsContext.Provider>
+  );
 }
 
 export function useRainRecords(): RainRecordsContextValue {
   const ctx = useContext(RainRecordsContext);
-  if (!ctx) throw new Error("useRainRecords must be used within RainRecordsProvider");
+  if (!ctx)
+    throw new Error("useRainRecords must be used within RainRecordsProvider");
   return ctx;
 }
-

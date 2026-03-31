@@ -18,8 +18,10 @@ function toLocalISODate(d: Date) {
 }
 
 function AppContent() {
-  const { user, login, loginModalOpen, openLoginModal, closeLoginModal } = useAuth();
-  const { getRecordByDateISO, upsertRecordByDateISO, records } = useRainRecords();
+  const { user, login, loginModalOpen, openLoginModal, closeLoginModal } =
+    useAuth();
+  const { getRecordByDateISO, upsertRecordByDateISO, records } =
+    useRainRecords();
 
   const todayISO = useMemo(() => {
     const t = new Date();
@@ -32,7 +34,10 @@ function AppContent() {
   const [recordMode, setRecordMode] = useState<"create" | "edit">("create");
   const [recordDayIndexInView, setRecordDayIndexInView] = useState(29);
   const [recordDateISO, setRecordDateISO] = useState(todayISO);
-  const [pendingOpen, setPendingOpen] = useState<{ dateISO: string; dayIndexInView: number } | null>(null);
+  const [pendingOpen, setPendingOpen] = useState<{
+    dateISO: string;
+    dayIndexInView: number;
+  } | null>(null);
 
   const [toast, setToast] = useState<string | null>(null);
 
@@ -80,6 +85,7 @@ function AppContent() {
     text: string;
     lyrics: { zh: string; en: string; ja: string };
     rainIntensityIndex: number;
+    specificColorString: string;
   }) => {
     return upsertRecordByDateISO(recordDateISO, payload);
   };
@@ -101,8 +107,12 @@ function AppContent() {
           />
           <RainGrid
             activeDateISO={activeDateISO}
-            onExistingRecordClick={(dateISO, dayIndexInView) => openRecordForDate(dateISO, dayIndexInView)}
-            onEmptyRecordClick={(dateISO, dayIndexInView) => openEmptyPrompt(dateISO, dayIndexInView)}
+            onExistingRecordClick={(dateISO, dayIndexInView) =>
+              openRecordForDate(dateISO, dayIndexInView)
+            }
+            onEmptyRecordClick={(dateISO, dayIndexInView) =>
+              openEmptyPrompt(dateISO, dayIndexInView)
+            }
           />
         </div>
 
@@ -140,7 +150,9 @@ function AppContent() {
             className="fixed z-[250] left-1/2 top-[92px] -translate-x-1/2 px-4"
           >
             <div className="glass rounded-2xl border border-rain-border shadow-xl px-4 py-3">
-              <p className="text-[11px] leading-relaxed text-stone-600 font-light tracking-wide">{toast}</p>
+              <p className="text-[11px] leading-relaxed text-stone-600 font-light tracking-wide">
+                {toast}
+              </p>
             </div>
           </motion.div>
         )}

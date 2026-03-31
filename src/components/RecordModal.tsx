@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RAIN_COLORS } from "../constants/rainColors";
+import { getGranularColorFromHumidity } from "../utils/colors";
 import type { RainLyrics, RainRecord } from "../state/rainRecords";
 
 type RecordModalProps = {
@@ -15,80 +16,40 @@ type RecordModalProps = {
     text: string;
     lyrics: RainLyrics;
     rainIntensityIndex: number;
+    specificColorString: string;
   }) => boolean;
 };
 
-function clamp(n: number, a: number, b: number) {
-  return Math.max(a, Math.min(b, n));
-}
+// 预设的唯美春雨文案库
+const POETIC_LYRICS = [
+  "最美的不是下雨天，是曾与你躲过雨的屋檐。",
+  "把今天的潮湿封进字里，让它慢慢回响。",
+  "雨声当作节拍，思念就不再那么吵。",
+  "隔着布满水珠的玻璃，看见更近的春天。",
+  "今天的雨，是我为你下的锚。",
+  "听雨落下的声音，像是在寻找谁的解答。",
+  "春雨如酒，让人在清醒与沉醉间徘徊。",
+];
 
-function computeRainIntensityIndex(text: string, photoDataUrl: string | null) {
-  const t = text.trim();
-  const len = t.length;
-  const photoBoost = photoDataUrl ? 28 : 0;
-  const score = (len * 3 + photoBoost) % 100; // 0..99
-  // 更长的文字更容易落到“湿润”区间（索引 4..7）
-  const wetBias = len > 12 ? 18 : 0;
-  const adjusted = clamp(score + wetBias, 0, 99);
-  const idx = Math.floor((adjusted / 100) * (RAIN_COLORS.length - 1));
-  return clamp(idx, 0, RAIN_COLORS.length - 1);
-}
-
-function simulateLyrics(text: string) {
-  const t = text.trim();
-  const seed = t.length + (t ? t.charCodeAt(0) : 13);
-
-  const zhOptions = [
-    "雨还在下，像在替谁把心事悄悄说完。",
-    "把今天的潮湿封进字里，让它慢慢回响。",
-    "风经过窗沿，替你把不敢说的话写成歌。",
-    "雨声当作节拍，思念就不再那么吵。",
-  ];
-  const enOptions = [
-    "The rain keeps time for the words I never said.",
-    "Today’s hush is pressed into the quiet between notes.",
-    "Let the wet sky sing softly, line by line.",
-    "A gentle beat—falling rain, steady and true.",
-  ];
-  const jaOptions = [
-    "雨の音が、言葉にならない気持ちを連れてくる。",
-    "今日のしめりを胸にしまって、ゆっくり響かせる。",
-    "窓辺を通る風が、歌に変えてくれる。",
-    "落ちる水のリズムで、想いは静かになる。",
-  ];
-
-  const zh = zhOptions[seed % zhOptions.length];
-  const en = enOptions[seed % enOptions.length];
-  const ja = jaOptions[seed % jaOptions.length];
-
-  // 将用户输入短句“轻轻点入”，模拟 AI 将文字/照片转成歌词
-  const hintZh = t ? `「${t.slice(0, 20)}${t.length > 20 ? "…" : ""}」` : "（无文字）";
-  const hintEn = t ? `“${t.slice(0, 18)}${t.length > 18 ? "…" : ""}”` : "（no text）";
-  const hintJa = t ? `「${t.slice(0, 18)}${t.length > 18 ? "…" : ""}」` : "（文章なし）";
-
-  return {
-    lyrics: {
-      zh: `${hintZh}\n${zh}`,
-      en: `${hintEn}\n${en}`,
-      ja: `${hintJa}\n${ja}`,
-    },
-  };
+function simulateLyrics(): RainLyrics {
+  const randomIndex = Math.floor(Math.random() * POETIC_LYRICS.length);
+  // 为了不破坏外部已有的类型定义，我们将单句歌词存入 zh 字段，其他留空
+  return { zh: POETIC_LYRICS[randomIndex], en: "", ja: "" };
 }
 
 function formatLyricsForTextarea(lyrics: RainLyrics) {
-  return `${lyrics.zh}\n---\n${lyrics.en}\n---\n${lyrics.ja}`;
+  return lyrics.zh || "";
 }
 
 function parseLyricsFromTextarea(raw: string): RainLyrics {
-  const parts = raw.split(/\n---\n/);
-  const zh = parts[0] ?? "";
-  const en = parts[1] ?? "";
-  const ja = parts.slice(2).join("\n---\n");
-  return { zh, en, ja };
+  return { zh: raw.trim(), en: "", ja: "" };
 }
 
-async function compressImageToJpegDataUrl(file: File, maxWidth = 800, quality = 0.6): Promise<string> {
-  // 以 JPEG 输出，显著减少 Base64 体积，避免本地存储爆仓白屏
+async function compressImageToJpegDataUrl(
+  file: File,
+  maxWidth = 800,
+  quality = 0.6,
+): Promise<string> {
   const objectUrl = URL.createObjectURL(file);
   try {
     const img = new Image();
@@ -132,45 +93,60 @@ async function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
-export default function RecordModal({ open, mode, dayIndex, dateISO, record, onClose, onSave }: RecordModalProps) {
+export default function RecordModal({
+  open,
+  mode,
+  dayIndex,
+  dateISO,
+  record,
+  onClose,
+  onSave,
+}: RecordModalProps) {
   const fileRef = useRef<HTMLInputElement | null>(null);
-  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(record?.photoDataUrl ?? null);
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(
+    record?.photoDataUrl ?? null,
+  );
   const [text, setText] = useState(record?.text ?? "");
-  const [lyrics, setLyrics] = useState<RainLyrics | null>(record?.lyrics ?? null);
+  const [lyrics, setLyrics] = useState<RainLyrics | null>(
+    record?.lyrics ?? null,
+  );
   const [loading, setLoading] = useState(false);
 
-  // 防止“图片/文字变化后 AI lyrics 仍然以旧结果为准”
+  // 核心改动：新增手动调节的情绪湿度计状态 (0-100，平滑连续值)
+  const [rainHumidityValue, setRainHumidityValue] = useState(
+    record?.rainIntensityIndex ? (record.rainIntensityIndex / 4) * 100 : 50,
+  );
+
   const [lyricsDirty, setLyricsDirty] = useState(false);
+  const [lyricsText, setLyricsText] = useState("");
 
   useEffect(() => {
     if (!open) return;
     setPhotoDataUrl(record?.photoDataUrl ?? null);
     setText(record?.text ?? "");
     setLyrics(record?.lyrics ?? null);
+    setRainHumidityValue(
+      record?.rainIntensityIndex ? (record.rainIntensityIndex / 4) * 100 : 50,
+    );
     setLoading(false);
     setLyricsDirty(false);
   }, [open, record]);
-
-  const rainIntensityIndex = useMemo(() => computeRainIntensityIndex(text, photoDataUrl), [text, photoDataUrl]);
-  const title = mode === "create" ? "封存今天的雨" : "查看/修改当天雨";
-
-  const [lyricsText, setLyricsText] = useState("");
 
   useEffect(() => {
     if (!open) return;
     setLyricsText(lyrics ? formatLyricsForTextarea(lyrics) : "");
   }, [open, lyrics]);
 
+  const title = mode === "create" ? "封存今天的雨" : "查看/修改当天雨";
+
   const onPickPhoto = async (file: File | null) => {
     if (!file) return;
 
     try {
       setLoading(true);
-      // 先压缩，成功则用于保存
       const compressed = await compressImageToJpegDataUrl(file, 800, 0.6);
       setPhotoDataUrl(compressed);
     } catch {
-      // 如果压缩失败，回退原始 dataURL（仍由 provider 的 try/catch 做防爆）
       const raw = await readFileAsDataUrl(file);
       setPhotoDataUrl(raw);
     } finally {
@@ -183,23 +159,45 @@ export default function RecordModal({ open, mode, dayIndex, dateISO, record, onC
     if (loading) return;
     setLoading(true);
 
-    // 模拟 AI 加载
+    // 模拟 AI 加载 Vibe
     await new Promise((r) => setTimeout(r, 900));
 
-    // 如果用户直接编辑了 AI lyrics，则不再重新生成；否则按当前文字生成
-    const nextLyrics = lyricsDirty ? (lyrics ?? simulateLyrics(text).lyrics) : simulateLyrics(text).lyrics;
+    // 任务二改动：支持盲盒式刷新歌词
+    let nextLyrics = lyrics;
+
+    if (mode === "create") {
+      // create模式：总是生成新歌词
+      nextLyrics = simulateLyrics();
+    } else if (mode === "edit" && !lyricsDirty) {
+      // edit模式且用户未手动修改歌词：强制生成新歌词（盲盒效果）
+      nextLyrics = simulateLyrics();
+    } else if (lyricsDirty) {
+      // edit模式且用户已手动修改歌词：使用用户的修改
+      nextLyrics = parseLyricsFromTextarea(lyricsText);
+    }
+
     setLyrics(nextLyrics);
+
+    // 计算精准的颜色字符串
+    const specificColorString = getGranularColorFromHumidity(rainHumidityValue);
+    // 转换 0-100 的湿度值回到 0-4 的索引（保留兼容性）
+    const rainIntensityIndex = Math.round((rainHumidityValue / 100) * 4);
 
     const success = onSave({
       photoDataUrl,
       text,
-      lyrics: nextLyrics,
+      lyrics: nextLyrics!,
       rainIntensityIndex,
+      specificColorString,
     });
 
     setLoading(false);
-    // 保存成功后，标记为“已与当前内容一致”
-    if (success) setLyricsDirty(false);
+
+    // 保存成功后立刻关闭面板
+    if (success) {
+      setLyricsDirty(false);
+      onClose();
+    }
   };
 
   return (
@@ -212,9 +210,8 @@ export default function RecordModal({ open, mode, dayIndex, dateISO, record, onC
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onClick={onClose}
         >
-          {/* 遮罩层：点击遮罩关闭，面板内部点击不冒泡 */}
+          {/* 遮罩层：加上 onClose 确保点击外部也能关闭 */}
           <button
             type="button"
             className="absolute inset-0 bg-[#F7F9F6]/40 z-[1]"
@@ -233,9 +230,13 @@ export default function RecordModal({ open, mode, dayIndex, dateISO, record, onC
             <div className="px-6 pt-6 pb-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-[12px] font-medium tracking-[0.22em] text-[#4A5D4E]">{title}</h2>
+                  <h2 className="text-[12px] font-medium tracking-[0.22em] text-[#4A5D4E]">
+                    {title}
+                  </h2>
                   <p className="mt-2 text-[11px] leading-relaxed text-stone-600 font-light tracking-wide">
-                    {mode === "create" ? "上传雨景，写下心情，然后封存。" : "你可以微调文字与 AI 歌词后重新封存。"}
+                    {mode === "create"
+                      ? "上传雨景，写下心情，然后封存。"
+                      : "你可以微调文字与歌词后重新封存。"}
                   </p>
                 </div>
                 <button
@@ -244,20 +245,38 @@ export default function RecordModal({ open, mode, dayIndex, dateISO, record, onC
                   className="p-2 rounded-full glass glass-hover transition-all duration-500"
                   aria-label="关闭"
                 >
-                  <span className="text-[12px] text-[#4A5D4E] opacity-70">×</span>
+                  <span className="text-[12px] text-[#4A5D4E] opacity-70">
+                    ×
+                  </span>
                 </button>
               </div>
 
               <div className="mt-3 flex items-center justify-between">
-                <p className="text-[10px] uppercase tracking-[0.2em] text-stone-400 font-medium">{dateISO}</p>
-                <div className="flex items-center gap-2">
-                  <span className="text-[9px] text-stone-400 font-light">Dry</span>
-                  <span
-                    className="w-2.5 h-2.5 rounded-full border border-rain-border"
-                    style={{ backgroundColor: RAIN_COLORS[rainIntensityIndex] }}
-                    aria-hidden="true"
+                <p className="text-[10px] uppercase tracking-[0.2em] text-stone-400 font-medium">
+                  {dateISO}
+                </p>
+
+                {/* 核心改动：升级为平滑渐变色彩条Slider (0-100) */}
+                <div className="flex items-center gap-1.5 flex-1 ml-4">
+                  <span className="text-[9px] text-stone-400 font-light whitespace-nowrap">
+                    Dry
+                  </span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={rainHumidityValue}
+                    onChange={(e) =>
+                      setRainHumidityValue(Number(e.target.value))
+                    }
+                    disabled={loading}
+                    className="rain-intensity-slider flex-1"
+                    aria-label="情绪湿度"
                   />
-                  <span className="text-[9px] text-stone-400 font-light">Wet</span>
+                  <span className="text-[9px] text-stone-400 font-light whitespace-nowrap">
+                    Wet
+                  </span>
                 </div>
               </div>
             </div>
@@ -266,10 +285,16 @@ export default function RecordModal({ open, mode, dayIndex, dateISO, record, onC
               <div className="glass rounded-2xl border border-rain-border bg-white/20 overflow-hidden">
                 <div className="relative h-[168px] bg-white/10">
                   {photoDataUrl ? (
-                    <img src={photoDataUrl} alt="Rain" className="absolute inset-0 w-full h-full object-cover" />
+                    <img
+                      src={photoDataUrl}
+                      alt="Rain"
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
                   ) : (
                     <div className="absolute inset-0 grid place-items-center">
-                      <p className="text-[11px] text-stone-600/80 font-light tracking-wide">选择一张雨景照片</p>
+                      <p className="text-[11px] text-stone-600/80 font-light tracking-wide">
+                        选择一张雨景照片
+                      </p>
                     </div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white/30" />
@@ -277,8 +302,12 @@ export default function RecordModal({ open, mode, dayIndex, dateISO, record, onC
 
                 <div className="p-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-stone-400 font-medium">Rain Photo</p>
-                    <p className="text-[10px] text-stone-500/70 font-light">本地保存</p>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-stone-400 font-medium">
+                      Rain Photo
+                    </p>
+                    <p className="text-[10px] text-stone-500/70 font-light">
+                      本地保存
+                    </p>
                   </div>
 
                   <div className="mt-3">
@@ -311,7 +340,6 @@ export default function RecordModal({ open, mode, dayIndex, dateISO, record, onC
                   value={text}
                   onChange={(e) => {
                     setText(e.target.value);
-                    setLyricsDirty(false);
                   }}
                   rows={3}
                   maxLength={120}
@@ -323,19 +351,29 @@ export default function RecordModal({ open, mode, dayIndex, dateISO, record, onC
 
               <div className="mt-5">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-stone-400 font-medium">AI Lyrics</p>
-                  <p className="text-[10px] text-stone-500/80 font-light">Day {dayIndex + 1}</p>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-stone-400 font-medium">
+                    AI Lyrics
+                  </p>
+                  <p className="text-[10px] text-stone-500/80 font-light">
+                    Day {dayIndex + 1}
+                  </p>
                 </div>
 
-                <div className="mt-2 glass rounded-2xl border border-rain-border bg-white/20 p-4 min-h-[118px] pointer-events-auto">
+                <div className="mt-2 glass rounded-2xl border border-rain-border bg-white/20 p-4 min-h-[90px] pointer-events-auto">
                   {loading ? (
                     <div className="flex flex-col items-center justify-center gap-3">
                       <motion.div
                         className="w-6 h-6 rounded-full border border-rain-border border-t-emerald-500/70"
                         animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          ease: "linear",
+                        }}
                       />
-                      <p className="text-[11px] text-stone-600/90 font-light tracking-wide">AI 正在封存…</p>
+                      <p className="text-[11px] text-stone-600/90 font-light tracking-wide">
+                        AI 正在封存…
+                      </p>
                     </div>
                   ) : (
                     <textarea
@@ -343,12 +381,10 @@ export default function RecordModal({ open, mode, dayIndex, dateISO, record, onC
                       onChange={(e) => {
                         setLyricsText(e.target.value);
                         setLyricsDirty(true);
-                        const parsed = parseLyricsFromTextarea(e.target.value);
-                        setLyrics(parsed);
                       }}
-                      rows={4}
-                      placeholder="点击“封存”后展示多语言歌词（中/英/日）。你也可以在此处微调。"
-                      className="w-full glass rounded-2xl px-4 py-3 text-[12px] tracking-wide text-stone-700 placeholder:text-stone-400/80 outline-none focus:bg-white/55 transition-all duration-500 pointer-events-auto"
+                      rows={3}
+                      placeholder="点击“封存”后将为你抽取一句绝美诗句。你也可以在此微调。"
+                      className="w-full glass rounded-2xl px-4 py-3 text-[12px] tracking-wide text-stone-700 placeholder:text-stone-400/80 outline-none focus:bg-white/55 transition-all duration-500 pointer-events-auto resize-none"
                       disabled={loading}
                     />
                   )}
@@ -362,7 +398,9 @@ export default function RecordModal({ open, mode, dayIndex, dateISO, record, onC
                   className="px-4 py-2 rounded-full glass glass-hover transition-all duration-500"
                   disabled={loading}
                 >
-                  <span className="text-[11px] font-medium tracking-[0.15em] text-[#4A5D4E] opacity-60">取消</span>
+                  <span className="text-[11px] font-medium tracking-[0.15em] text-[#4A5D4E] opacity-60">
+                    取消
+                  </span>
                 </button>
 
                 <button
@@ -384,4 +422,3 @@ export default function RecordModal({ open, mode, dayIndex, dateISO, record, onC
     </AnimatePresence>
   );
 }
-

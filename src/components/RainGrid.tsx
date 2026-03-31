@@ -28,7 +28,8 @@ function addDays(d: Date, delta: number) {
 function getDryIntensityIndexFromDateISO(dateISO: string) {
   // 为了“时间漫游”一致性，空白格的颜色也要跟日期绑定
   let hash = 0;
-  for (let i = 0; i < dateISO.length; i++) hash = (hash * 31 + dateISO.charCodeAt(i)) % 1000;
+  for (let i = 0; i < dateISO.length; i++)
+    hash = (hash * 31 + dateISO.charCodeAt(i)) % 1000;
   return hash % 4; // 0..3
 }
 
@@ -50,7 +51,12 @@ export default function RainGrid({
 
   const [dayOffset, setDayOffset] = useState(0); // 每次跳转 30 天
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [tooltip, setTooltip] = useState({ visible: false, content: "", x: 0, y: 0 });
+  const [tooltip, setTooltip] = useState({
+    visible: false,
+    tooltipData: { text: "", lyrics: "" },
+    x: 0,
+    y: 0,
+  });
 
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -60,7 +66,10 @@ export default function RainGrid({
     return t;
   }, []);
 
-  const windowDates = useMemo(() => getWindowDates(today, dayOffset), [today, dayOffset]);
+  const windowDates = useMemo(
+    () => getWindowDates(today, dayOffset),
+    [today, dayOffset],
+  );
 
   const visibleDays = useMemo(() => {
     return Array.from({ length: 30 }, (_, i) => {
@@ -81,19 +90,29 @@ export default function RainGrid({
     if (!activeDateISO) return;
     const idx = visibleDays.findIndex((d) => d.dateISO === activeDateISO);
     if (idx < 0) return;
-    const el = gridRef.current?.querySelector<HTMLElement>(`[data-day-index="${idx}"]`);
-    el?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+    const el = gridRef.current?.querySelector<HTMLElement>(
+      `[data-day-index="${idx}"]`,
+    );
+    el?.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+      behavior: "smooth",
+    });
   }, [activeDateISO, visibleDays]);
 
   const dayLabel = dayOffset === 0 ? "LAST 30 DAYS" : "PREV 30 DAYS";
   const dayLabelFuture = dayOffset < 0 ? "NEXT 30 DAYS" : dayLabel;
 
-  const handleMouseEnter = (e: MouseEvent, content: string, index: number) => {
+  const handleMouseEnter = (
+    e: MouseEvent,
+    tooltipData: { text: string; lyrics?: string },
+    index: number,
+  ) => {
     const rect = e.currentTarget.getBoundingClientRect();
     setHoveredIndex(index);
     setTooltip({
       visible: true,
-      content,
+      tooltipData,
       x: rect.left + rect.width / 2,
       y: rect.top,
     });
@@ -115,7 +134,10 @@ export default function RainGrid({
               onClick={() => setDayOffset((v) => v + 30)}
               className="p-1 rounded-full glass glass-hover transition-all duration-500"
             >
-              <ChevronLeft className="w-4 h-4 text-[#4A5D4E] opacity-60" strokeWidth={1.5} />
+              <ChevronLeft
+                className="w-4 h-4 text-[#4A5D4E] opacity-60"
+                strokeWidth={1.5}
+              />
             </button>
 
             <span className="text-[10px] uppercase tracking-[0.2em] text-stone-400 font-medium">
@@ -128,7 +150,10 @@ export default function RainGrid({
               onClick={() => setDayOffset((v) => v - 30)}
               className="p-1 rounded-full glass glass-hover transition-all duration-500"
             >
-              <ChevronRight className="w-4 h-4 text-[#4A5D4E] opacity-60" strokeWidth={1.5} />
+              <ChevronRight
+                className="w-4 h-4 text-[#4A5D4E] opacity-60"
+                strokeWidth={1.5}
+              />
             </button>
           </div>
 
@@ -155,19 +180,29 @@ export default function RainGrid({
           </div>
         </div>
 
-        <div ref={gridRef} className="grid grid-cols-6 sm:grid-cols-10 gap-2 w-full">
+        <div
+          ref={gridRef}
+          className="grid grid-cols-6 sm:grid-cols-10 gap-2 w-full"
+        >
           {visibleDays.map((d) => {
             const record = getRecordByDateISO(d.dateISO);
             const isHovered = hoveredIndex === d.dayIndexInView;
             const isAnyHovered = hoveredIndex !== null;
             const isActive = activeDateISO === d.dateISO;
 
-            const intensityIndex = record ? record.rainIntensityIndex : getDryIntensityIndexFromDateISO(d.dateISO);
-            const bg = RAIN_COLORS[intensityIndex] ?? RAIN_COLORS[0];
+            // 任务三改动：不再使用 RAIN_COLORS 映射，直接使用 specificColorString
+            const bg = record
+              ? record.specificColorString
+              : (RAIN_COLORS[getDryIntensityIndexFromDateISO(d.dateISO)] ??
+                RAIN_COLORS[0]);
 
-            const tooltipContent = record
-              ? `${record.lyrics.zh}\n---\n${record.lyrics.en}\n---\n${record.lyrics.ja}`
-              : `${d.dateISO}\n点击捕捉按钮来开启这一天的记录`;
+            // 任务三改动：清理假多语言，只展示日记文本和中文歌词
+            const tooltipData = record
+              ? { text: record.text, lyrics: record.lyrics.zh }
+              : {
+                  text: `${d.dateISO}\n点击捕捉按钮来开启这一天的记录`,
+                  lyrics: "",
+                };
 
             return (
               <motion.div
@@ -187,18 +222,43 @@ export default function RainGrid({
                 transition={
                   isAnyHovered && !isHovered
                     ? {
-                        opacity: { duration: 2, repeat: Infinity, ease: "easeInOut", delay: d.dayIndexInView * 0.05 },
-                        scale: { duration: 2, repeat: Infinity, ease: "easeInOut", delay: d.dayIndexInView * 0.05 },
+                        opacity: {
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                          delay: d.dayIndexInView * 0.05,
+                        },
+                        scale: {
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                          delay: d.dayIndexInView * 0.05,
+                        },
                       }
-                    : { opacity: { delay: d.dayIndexInView * 0.02, duration: 0.5 }, scale: { delay: d.dayIndexInView * 0.02, duration: 0.5 } }
+                    : {
+                        opacity: {
+                          delay: d.dayIndexInView * 0.02,
+                          duration: 0.5,
+                        },
+                        scale: {
+                          delay: d.dayIndexInView * 0.02,
+                          duration: 0.5,
+                        },
+                      }
                 }
-                onMouseEnter={(e) => handleMouseEnter(e, tooltipContent, d.dayIndexInView)}
+                onMouseEnter={(e) =>
+                  handleMouseEnter(e, tooltipData, d.dayIndexInView)
+                }
                 onMouseLeave={handleMouseLeave}
                 onClick={() => {
-                  if (record) onExistingRecordClick(d.dateISO, d.dayIndexInView);
+                  if (record)
+                    onExistingRecordClick(d.dateISO, d.dayIndexInView);
                   else onEmptyRecordClick(d.dateISO, d.dayIndexInView);
                 }}
-                className={["aspect-square rounded-md cursor-pointer relative", isActive ? "ring-1 ring-white/60" : ""].join(" ")}
+                className={[
+                  "aspect-square rounded-md cursor-pointer relative",
+                  isActive ? "ring-1 ring-white/60" : "",
+                ].join(" ")}
                 style={{
                   backgroundColor: bg,
                   boxShadow: isHovered
@@ -218,4 +278,3 @@ export default function RainGrid({
     </div>
   );
 }
-
