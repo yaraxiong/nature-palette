@@ -236,7 +236,7 @@ export default function RecordModal({
                   <p className="mt-2 text-[11px] leading-relaxed text-stone-600 font-light tracking-wide">
                     {mode === "create"
                       ? "上传雨景，写下心情，然后封存。"
-                      : "你可以微调文字与歌词后重新封存。"}
+                      : "你可以修改文字后重新封存。"}
                   </p>
                 </div>
                 <button

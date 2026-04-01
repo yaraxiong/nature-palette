@@ -76,7 +76,7 @@ function AppContent() {
   const openEmptyPrompt = (dateISO: string, dayIndexInView: number) => {
     setActiveDateISO(dateISO);
     setRecordDayIndexInView(dayIndexInView);
-    setToast("点击捕捉按钮来开启这一天的记录");
+    setToast("点击存档按钮来开启这一天的记录");
     window.setTimeout(() => setToast(null), 2200);
   };
 

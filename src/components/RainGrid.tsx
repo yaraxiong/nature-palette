@@ -200,7 +200,7 @@ export default function RainGrid({
             const tooltipData = record
               ? { text: record.text, lyrics: record.lyrics.zh }
               : {
-                  text: `${d.dateISO}\n点击捕捉按钮来开启这一天的记录`,
+                  text: `${d.dateISO}\n点击按钮来开启这一天的记录`,
                   lyrics: "",
                 };
 
