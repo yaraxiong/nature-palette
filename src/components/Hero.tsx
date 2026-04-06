@@ -15,7 +15,7 @@ export default function Hero({ onCaptureToday }: HeroProps) {
         className="flex flex-col items-center"
       >
         <h1 className="text-[22px] font-light tracking-widest text-stone-600 mb-12">
-          长沙，春雨的第 12 天。
+          长沙，下雨的第 12 天。
         </h1>
 
         <button
