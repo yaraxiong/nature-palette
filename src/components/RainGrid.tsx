@@ -105,7 +105,7 @@ export default function RainGrid({
 
   const handleMouseEnter = (
     e: MouseEvent,
-    tooltipData: { text: string; lyrics?: string },
+    tooltipData: { text: string; lyrics: string },
     index: number,
   ) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -198,7 +198,7 @@ export default function RainGrid({
 
             // 任务三改动：清理假多语言，只展示日记文本和中文歌词
             const tooltipData = record
-              ? { text: record.text, lyrics: record.lyrics.zh }
+              ? { text: record.text, lyrics: record.lyrics.zh || "" }
               : {
                   text: `${d.dateISO}\n点击按钮来开启这一天的记录`,
                   lyrics: "",
