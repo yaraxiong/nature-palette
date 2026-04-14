@@ -199,8 +199,9 @@ export default function RecordModal({
 
   /* ========== AI 歌词生成函数 ========== */
   const generateAILyricsFromImage = async () => {
-    // 验证是否有压缩后的图片可用
-    if (!compressedBase64) {
+    // 验证是否有可用的图片：优先使用压缩后的新图片，其次使用原有图片
+    const imageToUse = compressedBase64 || photoDataUrl;
+    if (!imageToUse) {
       console.warn("没有可用的图片，请先上传图片");
       return;
     }
@@ -232,13 +233,26 @@ export default function RecordModal({
             content: [
               {
                 type: "text",
-                text: `请根据这张照片匹配一句充满网感的雨天歌词。要求：\n1. 必须是关于下雨/雨天的歌词或诗句\n2. 富有文艺气息和网络流行语结合的风格\n3. 长度控制在 15-30 个汉字\n4. 直接返回歌词，不要解释`,
+                text: `你现在是一位兼具文学底蕴与人文关怀的独立音乐作词人（风格参考：梁博、李健、王菲、陈婧霏、陈绮贞、刘森等）。
+请深度感知我提供的“照片画面”与“心情文字”，为这张雨天记录创作一句（最多两句）极具画面感与内涵的歌词或现代诗句。
+
+【绝对禁忌】
+1. 严禁使用任何烂俗、矫情的“痛痒文学”词汇（如：天空哭泣、冲刷悲伤、泪水、心碎、想念、孤单）。
+2. 拒绝空洞的情感宣泄，拒绝直白的无病呻吟。
+
+【风格与立意要求】
+1. 视角的反转（治愈）：不要把下雨等同于悲伤。请将雨视作万物生长的蛰伏、大地的解渴、喧嚣的暂停、或是自我和解的契机。
+2. 充满力量的内涵：要在湿润的意境中写出生命力、韧性或通透的哲理，文字要克制，余味要悠长。
+3. 具象化表达（文艺）：多用具体的微小意象（如：屋檐的苔藓、路灯下的涟漪、泥土的气息、撑开的伞骨）来隐喻抽象的情感。
+
+请基于以上要求，直接输出这句歌词/诗句，不要包含任何多余的解释、引号或问候语。`,
               },
               {
                 type: "image_url",
                 image_url: {
-                  // compressedBase64  已是完整的 Data URL（形如 "data:image/jpeg;base64,/9j/4AAQSkZJRg..."）
-                  url: compressedBase64,
+                  // imageToUse 已是完整的 Data URL（形如 "data:image/jpeg;base64,/9j/4AAQSkZJRg..."）
+                  // 支持 create 模式下的新上传图片和 edit 模式下的原有图片
+                  url: imageToUse,
                 },
               },
             ],
@@ -310,21 +324,22 @@ export default function RecordModal({
       await new Promise((r) => setTimeout(r, 900));
     }
 
-    // 任务二改动：支持盲盒式刷新歌词
-    let nextLyrics =
-      lyrics || aiLyrics
-        ? { zh: aiLyrics || lyricsText, en: "", ja: "" }
-        : lyrics;
+    // 【修复】：直接使用真实数据，删除死数据引用
+    // 优先级：AI 生成的歌词 > 用户手动输入的歌词 > 现有的歌词
+    let nextLyrics: RainLyrics;
 
-    if (mode === "create" && !aiLyrics) {
-      // create模式且没有 AI 歌词：使用预设歌词
-      nextLyrics = simulateLyrics();
-    } else if (mode === "edit" && !lyricsDirty) {
-      // edit模式且用户未手动修改歌词：强制生成新歌词（盲盒效果）
-      nextLyrics = simulateLyrics();
-    } else if (lyricsDirty) {
-      // edit模式且用户已手动修改歌词：使用用户的修改
+    if (aiLyrics) {
+      // 有 AI 生成的歌词，使用 AI 的
+      nextLyrics = { zh: aiLyrics, en: "", ja: "" };
+    } else if (lyricsText.trim()) {
+      // 没有 AI 歌词但用户手动输入了，使用用户的输入
       nextLyrics = parseLyricsFromTextarea(lyricsText);
+    } else if (lyrics) {
+      // 都没有才使用现有的歌词（edit 模式下的原有数据）
+      nextLyrics = lyrics;
+    } else {
+      // 都没有就返回空值，让父组件决定如何处理
+      nextLyrics = { zh: "", en: "", ja: "" };
     }
 
     setLyrics(nextLyrics);
@@ -506,14 +521,15 @@ export default function RecordModal({
                     <p className="text-[10px] uppercase tracking-[0.2em] text-stone-400 font-medium">
                       AI Lyrics
                     </p>
-                    {/* 「AI 生成」按钮：只要有上传图片就显示，支持 create 和 edit 模式 */}
-                    {compressedBase64 && (
+                    {/* 【修复】「AI 生成」按钮显示条件：支持 create 模式下上传新图片，以及 edit 模式下原有图片 */}
+                    {(compressedBase64 ||
+                      (mode === "edit" && photoDataUrl)) && (
                       <button
                         type="button"
                         onClick={generateAILyricsFromImage}
                         disabled={isGenerating || loading}
                         className="px-2 py-1 rounded-full text-[9px] font-medium tracking-[0.1em] glass glass-hover transition-all duration-300 disabled:opacity-50"
-                        title="基于上传的图片使用豆包 AI 生成歌词"
+                        title="基于图片使用豆包 AI 生成歌词"
                       >
                         <span className="text-emerald-600/70">
                           {isGenerating
