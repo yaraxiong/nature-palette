@@ -5,9 +5,9 @@
 
 ## 📖 About The Project / 项目简介
 
-**Archive the Rain** is a personal vibe-coding project born from a continuous rainy season. It serves as an "emotional dehumidifier", allowing users to capture rain photos, select their emotional humidity through a smooth color gradient, and build a unique GitHub-style contribution graph out of their rainy days. The project leverages AI to intelligently match lyrics to uploaded rain photos, creating a deeply personalized archiving experience.
+**Archive the Rain** is a personal project born from a continuous rainy season. It serves as an "emotional dehumidifier", allowing users to capture rain photos, select their emotional humidity through a smooth color gradient, and build a unique GitHub-style contribution graph out of their rainy days. The project leverages AI to intelligently match lyrics to uploaded rain photos, creating a deeply personalized archiving experience.
 
-这是一个诞生于漫长雨季的个人前端练手项目。它不仅是一个天气记录工具，更是一个“情感除湿机”。用户可以通过色彩渐变滑块记录当天的“情绪湿度”，并将每一次下雨，变成主页上一面独一无二的雨天贡献图（Rain Contribution Graph）。项目利用 AI 技术，根据用户上传的雨景照片智能匹配或生成相应的音乐歌词，打造深度个性化的存档体验。
+这是一个诞生于漫长雨季的个人前端练手项目。它不仅是一个天气记录工具，更是一个“情感除湿机”。用户可以通过色彩渐变滑块记录当天的“情绪湿度”，并将每一次下雨，变成主页上一面独一无二的雨天贡献图（Rain Contribution Graph）。项目利用 AI 技术，根据用户上传的雨景照片智能匹配或生成相应的音乐歌词，打造个性化的存档体验。
 
 ### ✨ Key Features / 核心功能
 
