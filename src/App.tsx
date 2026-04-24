@@ -7,7 +7,7 @@ import { useAuth } from "./state/auth";
 import RecordModal from "./components/RecordModal";
 import LoginModal from "./components/LoginModal";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 function pad2(n: number) {
   return String(n).padStart(2, "0");
@@ -20,7 +20,7 @@ function toLocalISODate(d: Date) {
 function AppContent() {
   const { user, login, loginModalOpen, openLoginModal, closeLoginModal } =
     useAuth();
-  const { getRecordByDateISO, upsertRecordByDateISO, records } =
+  const { getRecordByDateISO, upsertRecordByDateISO } =
     useRainRecords();
 
   const todayISO = useMemo(() => {
@@ -42,7 +42,6 @@ function AppContent() {
   const [toast, setToast] = useState<string | null>(null);
 
   // 不使用 useMemo，确保在 localStorage 写入成功后能立刻刷新面板展示内容
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const record = recordDateISO ? getRecordByDateISO(recordDateISO) : null;
 
   const closeRecord = () => {
@@ -63,15 +62,6 @@ function AppContent() {
     setRecordMode(existing ? "edit" : "create");
     setRecordOpen(true);
   };
-
-  useEffect(() => {
-    if (!user) return;
-    if (!pendingOpen) return;
-    const { dateISO, dayIndexInView } = pendingOpen;
-    setPendingOpen(null);
-    openRecordForDate(dateISO, dayIndexInView);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, pendingOpen]);
 
   const openEmptyPrompt = (dateISO: string, dayIndexInView: number) => {
     setActiveDateISO(dateISO);
@@ -137,7 +127,14 @@ function AppContent() {
       <LoginModal
         open={loginModalOpen}
         onClose={closeLoginModal}
-        onLogin={(displayName) => login(displayName)}
+        onLogin={(displayName) => {
+          login(displayName);
+          if (pendingOpen) {
+            const { dateISO, dayIndexInView } = pendingOpen;
+            setPendingOpen(null);
+            openRecordForDate(dateISO, dayIndexInView);
+          }
+        }}
       />
 
       <AnimatePresence>
